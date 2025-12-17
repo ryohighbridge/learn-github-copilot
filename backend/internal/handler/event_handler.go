@@ -7,14 +7,22 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ryohighbridge/learn-github-copilot/backend/internal/domain"
-	"github.com/ryohighbridge/learn-github-copilot/backend/internal/service"
 )
 
-type EventHandler struct {
-	service *service.EventService
+// EventServiceInterface はイベントサービスのインターフェース
+type EventServiceInterface interface {
+	GetAllEvents() ([]domain.Event, error)
+	GetEventByID(id int) (*domain.Event, error)
+	CreateEvent(event *domain.Event) error
+	UpdateEvent(event *domain.Event) error
+	DeleteEvent(id int) error
 }
 
-func NewEventHandler(service *service.EventService) *EventHandler {
+type EventHandler struct {
+	service EventServiceInterface
+}
+
+func NewEventHandler(service EventServiceInterface) *EventHandler {
 	return &EventHandler{service: service}
 }
 
@@ -40,6 +48,10 @@ func (h *EventHandler) GetEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	event, err := h.service.GetEventByID(id)
+	if err == domain.ErrNotFound {
+		http.Error(w, "Event not found", http.StatusNotFound)
+		return
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -6,14 +6,20 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/ryohighbridge/learn-github-copilot/backend/internal/service"
+	"github.com/ryohighbridge/learn-github-copilot/backend/internal/domain"
 )
 
-type CalendarHandler struct {
-	service *service.CalendarService
+// CalendarServiceInterface はカレンダーサービスのインターフェース
+type CalendarServiceInterface interface {
+	GetCalendar(year, month int) (*domain.Calendar, error)
+	GetHolidays(year int) []domain.Holiday
 }
 
-func NewCalendarHandler(service *service.CalendarService) *CalendarHandler {
+type CalendarHandler struct {
+	service CalendarServiceInterface
+}
+
+func NewCalendarHandler(service CalendarServiceInterface) *CalendarHandler {
 	return &CalendarHandler{service: service}
 }
 

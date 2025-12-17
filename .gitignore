@@ -19,6 +19,10 @@ build/
 # Output of the go coverage tool
 *.out
 
+# Test coverage
+frontend/coverage/
+coverage/
+
 # Database
 *.db
 *.sqlite

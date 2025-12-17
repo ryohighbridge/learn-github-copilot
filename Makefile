@@ -1,6 +1,6 @@
-# Makefileでマイグレーション管理を簡単にする
+# Makefileでマイグレーション管理とテストを簡単にする
 
-.PHONY: migrate-up migrate-down migrate-create migrate-force migrate-version
+.PHONY: migrate-up migrate-down migrate-create migrate-force migrate-version test test-backend test-frontend test-coverage
 
 # マイグレーションを実行（最新まで）
 migrate-up:
@@ -24,6 +24,25 @@ migrate-force:
 migrate-version:
 	docker compose exec db migrate -path /migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@localhost:5432/$(DB_NAME)?sslmode=disable" version
 
+# 全てのテストを実行
+test: test-backend test-frontend
+
+# バックエンドのテストを実行
+test-backend:
+	@echo "Running backend tests..."
+	cd backend && go test -v ./...
+
+# フロントエンドのテストを実行
+test-frontend:
+	@echo "Running frontend tests..."
+	cd frontend && npm test
+
+# フロントエンドのカバレッジレポートを生成
+test-coverage:
+	@echo "Running frontend tests with coverage..."
+	cd frontend && npm run test:coverage
+
 # 環境変数を.envから読み込み
 include .env
 export
+
