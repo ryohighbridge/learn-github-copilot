@@ -150,13 +150,17 @@ curl -X POST http://localhost:8080/api/events \
 - Next.js開発サーバーが起動
 
 **バックエンド**
+- 開発環境では`Dockerfile.dev`を使用してGoツールチェーンを含むイメージを使用
 - `backend`配下のファイル変更時にコンテナを再起動
 - ソースコードは`/app`にマウントされます
+- テストは`make test-backend`または`cd backend && go test ./...`で実行可能
 
 **データベース**
 - データは`db-data`ボリュームに永続化されます
 - マイグレーションは`db/migrations`ディレクトリで管理
 - コンテナ起動時に自動でマイグレーションが実行されます
+
+> **注意**: 本番環境では`backend/Dockerfile`（マルチステージビルド）を使用してください。開発環境では`backend/Dockerfile.dev`を使用してGoのツールチェーンを含めています。
 
 ## データベースマイグレーション
 
@@ -434,11 +438,38 @@ docker compose exec -T db psql -U calendar_user calendar_db < backup.sql
 
 ## テスト
 
-### バックエンドのテスト
+このプロジェクトでは、バックエンドとフロントエンドの両方で包括的なユニットテストを実装しています。
+
+### Makefileを使用したテスト実行
+
+便利なMakeコマンドを用意しています：
 
 ```bash
-# ユニットテストの実行
-docker compose exec backend go test ./...
+# 全てのテストを実行（バックエンド + フロントエンド）
+make test
+
+# バックエンドのテストのみ実行
+make test-backend
+
+# フロントエンドのテストのみ実行
+make test-frontend
+
+# フロントエンドのカバレッジレポートを生成
+make test-coverage
+```
+
+### バックエンドのテスト
+
+Goの標準テストフレームワークを使用しています。
+
+**テストの実行**
+
+```bash
+# Makefileを使用（推奨）
+make test-backend
+
+# または直接実行
+docker compose exec backend go test -v ./...
 
 # カバレッジ付きでテスト
 docker compose exec backend go test -cover ./...
@@ -446,17 +477,89 @@ docker compose exec backend go test -cover ./...
 # 詳細なカバレッジレポート
 docker compose exec backend go test -coverprofile=coverage.out ./...
 docker compose exec backend go tool cover -html=coverage.out
+
+# 特定のパッケージのみテスト
+docker compose exec backend go test -v ./internal/service/...
+```
+
+**テスト構成**
+
+- **Service層**: ビジネスロジックのテスト
+  - `backend/internal/service/event_service_test.go`
+  - `backend/internal/service/calendar_service_test.go`
+  
+- **Handler層**: HTTPハンドラーのテスト
+  - `backend/internal/handler/event_handler_test.go`
+  - `backend/internal/handler/calendar_handler_test.go`
+  
+- **Repository層**: データアクセス層の統合テスト
+  - `backend/internal/repository/event_repository_test.go`
+  - 注意: Repository層のテストは実際のPostgreSQLデータベースが必要なため、`-short`フラグでスキップされます
+
+**短いテストの実行（統合テストをスキップ）**
+
+```bash
+docker compose exec backend go test -short ./...
 ```
 
 ### フロントエンドのテスト
 
+Jest と React Testing Library を使用しています。
+
+**テストの実行**
+
 ```bash
-# テストの実行（将来実装予定）
+# Makefileを使用（推奨）
+make test-frontend
+
+# または直接実行
 docker compose exec frontend npm test
 
-# E2Eテスト（将来実装予定）
-docker compose exec frontend npm run test:e2e
+# ウォッチモード
+docker compose exec frontend npm run test:watch
+
+# カバレッジレポート生成
+make test-coverage
+# または
+docker compose exec frontend npm run test:coverage
 ```
+
+**テスト構成**
+
+- **コンポーネントテスト**:
+  - `frontend/src/components/__tests__/CalendarHeader.test.tsx`
+  - `frontend/src/components/__tests__/CalendarGrid.test.tsx`
+  
+- **Contextテスト**:
+  - `frontend/src/contexts/__tests__/CalendarContext.test.tsx`
+  
+- **APIクライアントテスト**:
+  - `frontend/src/lib/__tests__/api.test.ts`
+
+**テスト設定ファイル**
+
+- `frontend/jest.config.ts`: Jest設定
+- `frontend/jest.setup.ts`: テストセットアップ（Testing Libraryの設定）
+
+### テストのベストプラクティス
+
+**バックエンド**
+
+1. モックを使用してテストを独立させる
+2. テーブル駆動テストを活用する
+3. エラーケースも必ずテストする
+4. 統合テストは`testing.Short()`でスキップできるようにする
+
+**フロントエンド**
+
+1. ユーザーの操作をシミュレートする
+2. 実装の詳細ではなく、動作をテストする
+3. APIはモックする
+4. アクセシビリティを考慮したクエリを使用する
+
+### 継続的インテグレーション
+
+将来的にはGitHub Actionsなどを使用して、プルリクエスト時に自動的にテストを実行する予定です。
 
 ## 今後の拡張可能性
 
