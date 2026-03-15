@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine AS builder
+FROM golang:1.26-trixie AS builder
 
 WORKDIR /app
 
@@ -12,9 +12,12 @@ COPY . .
 # ビルド
 RUN CGO_ENABLED=0 GOOS=linux go build -o /calendar-api ./cmd/api
 
-FROM alpine:latest
+FROM debian:trixie-slim
 
-RUN apk --no-cache add ca-certificates tzdata
+RUN apt update && apt install -y --no-install-recommends \
+    ca-certificates \
+    tzdata \
+    && rm -rf /var/lib/apt/lists/*
 ENV TZ=Asia/Tokyo
 
 WORKDIR /root/

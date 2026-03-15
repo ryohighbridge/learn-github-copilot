@@ -1,8 +1,10 @@
 # 開発環境用のDockerfile
-FROM golang:1.21-alpine
+FROM golang:1.26-trixie
 
 # 開発ツールのインストール
-RUN apk add --no-cache git
+RUN apt update && apt install -y --no-install-recommends \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
